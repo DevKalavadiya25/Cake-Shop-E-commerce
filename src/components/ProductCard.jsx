@@ -39,6 +39,7 @@ function ProductCard({ product, onAddToCart, showDelete, onDelete }) {
         </div>
       </Card.Body>
     </Card>
+    
   );
 }
 
