@@ -1,5 +1,4 @@
-import jwt from 'jsonwebtoken';
-import User from '../models/User.js';
+import supabase from '../config/database.js';
 
 export const protect = async (req, res, next) => {
   let token;
@@ -10,22 +9,27 @@ export const protect = async (req, res, next) => {
   ) {
     try {
       token = req.headers.authorization.split(' ')[1];
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      req.user = await User.findById(decoded.id).select('-password');
+      req.token = token;
+
+      const { data: { user }, error } = await supabase.auth.getUser(token);
+
+      if (error || !user) {
+        return res.status(401).json({ message: 'Not authorized, token failed' });
+      }
+
+      req.user = user;
       next();
     } catch (error) {
       console.error(error);
       return res.status(401).json({ message: 'Not authorized, token failed' });
     }
-  }
-
-  if (!token) {
+  } else {
     return res.status(401).json({ message: 'Not authorized, no token' });
   }
 };
 
 export const admin = (req, res, next) => {
-  if (req.user && req.user.role === 'admin') {
+  if (req.user && req.user.user_metadata && req.user.user_metadata.role === 'admin') {
     next();
   } else {
     res.status(403).json({ message: 'Not authorized as admin' });

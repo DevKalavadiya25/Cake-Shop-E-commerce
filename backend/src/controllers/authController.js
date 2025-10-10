@@ -1,30 +1,29 @@
-import User from '../models/User.js';
-import generateToken from '../utils/generateToken.js';
+import supabase from '../config/database.js';
 
 export const registerUser = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password } = req.body;
 
-    const userExists = await User.findOne({ email });
-
-    if (userExists) {
-      return res.status(400).json({ message: 'User already exists' });
-    }
-
-    const user = await User.create({
-      name,
+    const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
-      role: role || 'user',
+      options: {
+        data: {
+          name,
+        },
+      },
     });
 
-    if (user) {
+    if (authError) {
+      return res.status(400).json({ message: authError.message });
+    }
+
+    if (authData.user) {
       res.status(201).json({
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        token: generateToken(user._id),
+        id: authData.user.id,
+        email: authData.user.email,
+        name: authData.user.user_metadata.name,
+        session: authData.session,
       });
     } else {
       res.status(400).json({ message: 'Invalid user data' });
@@ -38,15 +37,21 @@ export const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const user = await User.findOne({ email }).select('+password');
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-    if (user && (await user.matchPassword(password))) {
+    if (error) {
+      return res.status(401).json({ message: error.message });
+    }
+
+    if (data.user && data.session) {
       res.json({
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        token: generateToken(user._id),
+        id: data.user.id,
+        email: data.user.email,
+        name: data.user.user_metadata.name,
+        session: data.session,
       });
     } else {
       res.status(401).json({ message: 'Invalid email or password' });
@@ -58,18 +63,17 @@ export const loginUser = async (req, res) => {
 
 export const getUserProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id);
+    const { data: { user }, error } = await supabase.auth.getUser(req.token);
 
-    if (user) {
-      res.json({
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      });
-    } else {
-      res.status(404).json({ message: 'User not found' });
+    if (error || !user) {
+      return res.status(404).json({ message: 'User not found' });
     }
+
+    res.json({
+      id: user.id,
+      email: user.email,
+      name: user.user_metadata.name,
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
