@@ -108,7 +108,7 @@ function AdminPanel({ products, onAddProduct, onDeleteProduct, onUpdateProduct }
                   <td className="align-middle">
                     <span className="badge bg-secondary">{product.category}</span>
                   </td>
-                  <td className="align-middle">${product.price}</td>
+                  <td className="align-middle">₹{product.price}</td>
                   <td className="align-middle">
                     <Button
                       variant="warning"
@@ -201,6 +201,7 @@ function AdminPanel({ products, onAddProduct, onDeleteProduct, onUpdateProduct }
               <Col md={6}>
                 <Form.Group className="mb-3">
                   <Form.Label>Image URL</Form.Label>
+                  
                   <Form.Control
                     type="text"
                     name="image"
